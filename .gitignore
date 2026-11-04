@@ -8,3 +8,13 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+.vscode/
+
+build/
+tmp/
+*.bin
+__pycache__/
+results/
+
+compile_commands.json
