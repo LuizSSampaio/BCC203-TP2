@@ -1,16 +1,16 @@
 #include "File.hpp"
 
-#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 
 #include "Common.hpp"
+#include "Item.hpp"
 
-File::File(const std::string& path, uint64_t quantity)
+File::File(const std::string &path, uint64_t quantity)
     : path_(path), quantity_(quantity) {
-    this->file_ = std::ifstream(path, std::ios::binary);
+    this->file_ = std::ifstream(path);
 
     if (!this->file_.is_open()) {
         throw std::runtime_error("Failed to open file");
@@ -27,49 +27,42 @@ std::array<Item, PAGE_SIZE> File::GetNextPage() {
         return page;
     }
 
-    auto const pos = this->file_.tellg();
-    uint64_t toRead = PAGE_SIZE;
-    if (pos >= 0) {
-        uint64_t const currentItem = static_cast<uint64_t>(pos) / sizeof(Item);
-        if (currentItem < this->quantity_) {
-            uint64_t const remaining = this->quantity_ - currentItem;
-            toRead = std::min(static_cast<uint64_t>(PAGE_SIZE), remaining);
-        } else {
-            toRead = 0;
+    constexpr size_t REG_LEN = 8;
+    constexpr size_t GRADE_LEN = 5;
+    constexpr size_t STATE_LEN = 2;
+    constexpr size_t CITY_LEN = 50;
+    constexpr size_t DEGREE_LEN = 30;
+
+    uint64_t counter = 0;
+    std::string line;
+    while (counter < 100 && std::getline(this->file_, line)) {
+        if (line.size() <
+            (REG_LEN + GRADE_LEN + STATE_LEN + CITY_LEN + DEGREE_LEN)) {
+            continue;
         }
+
+        Item reg = Item();
+        size_t offset = 0;
+
+        reg.registrationNumber = std::stol(line.substr(offset, REG_LEN));
+        offset += REG_LEN;
+
+        reg.grade = std::stof(line.substr(offset, GRADE_LEN));
+        offset += GRADE_LEN;
+
+        line.copy(reg.state.data(), STATE_LEN, offset);
+        offset += STATE_LEN;
+
+        line.copy(reg.city.data(), CITY_LEN, offset);
+        offset += CITY_LEN;
+
+        line.copy(reg.degree.data(), DEGREE_LEN, offset);
+
+        page[counter] = reg;
+
+        counter++;
     }
 
-    if (toRead > 0) {
-        Metrics::RecordDiskRead();
-        this->file_.read(reinterpret_cast<char*>(page.data()),
-                         sizeof(Item) * toRead);
-    }
-
-    return page;
-}
-
-std::array<Item, PAGE_SIZE> File::GetPageAt(size_t index) {
-    Log::Info("Reading page " + std::to_string(index) + " from file (" +
-              this->path_ + ")");
-    std::array<Item, PAGE_SIZE> page{};
-
-    if (this->file_.eof() || this->file_.fail()) {
-        this->file_.clear();
-    }
-
-    auto oldPos = this->file_.tellg();
-
-    if (index * PAGE_SIZE >= this->quantity_) {
-        Log::Error("Invalid input file access index");
-        return page;
-    }
-
-    this->file_.seekg(sizeof(Item) * PAGE_SIZE * index, std::ifstream::beg);
-    page = this->GetNextPage();
-
-    if (oldPos >= 0) {
-        this->file_.seekg(oldPos);
-    }
     return page;
 }
 

@@ -9,14 +9,12 @@
 #include "Common.hpp"
 #include "Item.hpp"
 
-// TODO: Change implementation to read text
 class File {
   public:
     File(const std::string &path, uint64_t quantity);
     ~File();
 
     std::array<Item, PAGE_SIZE> GetNextPage();
-    std::array<Item, PAGE_SIZE> GetPageAt(size_t index);
 
     std::string path() const;
     std::filesystem::file_time_type lastModification() const;
