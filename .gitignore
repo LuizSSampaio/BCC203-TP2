@@ -16,5 +16,6 @@ tmp/
 *.bin
 __pycache__/
 results/
+.cache/
 
 compile_commands.json
