@@ -9,9 +9,10 @@
 #include "Common.hpp"
 #include "Item.hpp"
 
+// TODO: Change implementation to read text
 class File {
-public:
-    File(const std::string& path, uint64_t quantity);
+  public:
+    File(const std::string &path, uint64_t quantity);
     ~File();
 
     std::array<Item, PAGE_SIZE> GetNextPage();
@@ -23,7 +24,7 @@ public:
     uint64_t quantity() const;
     bool eof();
 
-private:
+  private:
     std::ifstream file_;
     std::string path_;
 
