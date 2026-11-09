@@ -82,6 +82,15 @@
       '';
     };
 
+    report = {
+      description = "Compile LaTeX report (relatorio.tex) to PDF";
+      exec = ''
+        pdflatex -interaction=nonstopmode relatorio.tex
+        pdflatex -interaction=nonstopmode relatorio.tex
+        echo "Relatorio gerado com sucesso em relatorio.pdf"
+      '';
+    };
+
     clean = {
       description = "Remove build artifacts using CMake";
       exec = ''

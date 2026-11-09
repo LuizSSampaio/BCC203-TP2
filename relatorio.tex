@@ -1,0 +1,761 @@
+\documentclass[12pt,a4paper]{article}
+
+% ==============================================================================
+% Pacotes Fundamentais e Tipografia
+% ==============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[brazilian]{babel}
+\usepackage[top=3cm,bottom=2cm,left=3cm,right=2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds}
+
+% ==============================================================================
+% Configurações de Hiperlinks
+% ==============================================================================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black,
+    pdfauthor={Luiz Henrique Silva Sampaio, Kaio Alves Simões, Victor Kangussu, Vinícius Brandão},
+    pdftitle={Relatório Prático II: Análise Comparativa de Algoritmos de Ordenação em Memória Secundária - BCC203},
+    pdfsubject={Estrutura de Dados II - UFOP},
+    pdfkeywords={Ordenação Externa, Intercalação Balanceada, Seleção por Substituição, Quicksort Externo, Fitas Magnéticas, Benchmark, BCC203, UFOP}
+}
+
+% ==============================================================================
+% Configurações de Cabeçalho e Rodapé
+% ==============================================================================
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\footnotesize \nouppercase{\leftmark}}
+\rfoot{\thepage}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ==============================================================================
+% Configurações de Listagens de Código
+% ==============================================================================
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue!80!black}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{red!70!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{gray!5},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    rulecolor=\color{gray!40},
+    tabsize=4,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false
+}
+
+\begin{document}
+
+% ==============================================================================
+% CAPA (Capa Acadêmica ABNT / DECOM - UFOP)
+% ==============================================================================
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+    \centering
+    {\large \textbf{UNIVERSIDADE FEDERAL DE OURO PRETO -- UFOP}}\\[0.2cm]
+    {\large \textbf{INSTITUTO DE CIÊNCIAS EXATAS E BIOLÓGICAS -- ICEB}}\\[0.2cm]
+    {\large \textbf{DEPARTAMENTO DE COMPUTAÇÃO -- DECOM}}\\[0.2cm]
+
+    \vfill
+
+    {\large \textbf{BCC203 -- ESTRUTURA DE DADOS II}}\\[0.6cm]
+
+    {\LARGE \textbf{RELATÓRIO PRÁTICO II:}}\\[0.3cm]
+    {\Large \textbf{ANÁLISE COMPARATIVA DE ALGORITMOS DE ORDENAÇÃO EM MEMÓRIA SECUNDÁRIA}}\\[0.4cm]
+    {\large Intercalação Balanceada de Vários Caminhos ($2f$ Fitas), Intercalação Balanceada ($f+1$ Fitas) e Quicksort Externo}
+
+    \vfill
+
+    {\large \textbf{Autores:}}\\[0.25cm]
+    Kaio Alves Simões\\[0.15cm]
+    Luiz Henrique Silva Sampaio\\[0.15cm]
+    Victor Kangussu\\[0.15cm]
+    Vinícius Brandão\\[0.8cm]
+
+    {\large \textbf{Professor:}}\\[0.25cm]
+    Prof. Guilherme Tavares de Assis
+
+    \vfill
+
+    {\large \textbf{Ouro Preto -- MG}}\\[0.2cm]
+    {\large \textbf{2026}}
+\end{titlepage}
+
+% ==============================================================================
+% SUMÁRIO
+% ==============================================================================
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+\thispagestyle{empty}
+\tableofcontents
+\newpage
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% ==============================================================================
+% 1. INTRODUÇÃO
+% ==============================================================================
+\section{Introdução}
+\label{sec:introducao}
+
+A ordenação eficiente de grandes coleções de dados representa uma das áreas clássicas e mais críticas da Ciência da Computação. Enquanto os algoritmos de ordenação interna (como \textit{Quicksort}, \textit{Mergesort} e \textit{Heapsort}) operam sob o pressuposto fundamental de que toda a massa de registros cabe confortavelmente na memória principal (RAM), cenários corporativos, científicos e governamentais frequentemente lidam com conjuntos de dados cuja dimensão volumétrica excede substancialmente a capacidade da memória física volátil disponível.
+
+Nesses contextos, a dependência direta da memória secundária (discos rígidos magnéticos, fitas de armazenamento ou unidades de estado sólido -- SSDs) impõe uma mudança paradigmática fundamental: o tempo gasto com transferências físicas de blocos de entrada e saída (E/S ou \textit{Input/Output} -- I/O) entre a memória externa e a interna torna-se ordens de magnitude superior ao tempo de processamento das instruções de CPU e comparações lógicas em memória RAM. Consequentemente, o objetivo primordial dos algoritmos de \textbf{ordenação externa} reside em minimizar o tráfego de leitura e escrita sobre os dispositivos secundários, organizando fluxos de dados contíguos e explorando eficientemente buffers internos de transferência.
+
+No âmbito da disciplina de \textbf{Estrutura de Dados II (BCC203)}, este trabalho prático tem como propósito implementar, avaliar experimentalmente e analisar comparativamente a complexidade de desempenho de três algoritmos fundamentais de ordenação externa apresentados em aula:
+\begin{enumerate}
+    \item \textbf{Intercalação Balanceada de Vários Caminhos ($2f$ fitas):} utilizando a técnica de \textbf{seleção por substituição} na etapa de geração dos blocos ordenados iniciais, operando com uma memória interna restrita a no máximo 10 registros ($M = 10$) e 20 fitas de armazenamento externo (distribuídas rigorosamente em 10 fitas de entrada e 10 fitas de saída a cada passada de intercalação, isto é, $f = 10$);
+    \item \textbf{Intercalação Balanceada de Vários Caminhos ($f+1$ fitas):} utilizando a técnica de \textbf{seleção por substituição} na etapa de geração dos blocos ordenados iniciais, operando com uma memória interna de até 19 registros ($M = 19$) e 20 fitas de armazenamento externo dispostas na proporção de 19 fitas de entrada e 1 fita receptora de saída a cada etapa de intercalação ($f = 19$);
+    \item \textbf{Quicksort Externo:} adaptando a estratégia de divisão e conquista com pivoteamento para arquivos externos, operando sob uma memória interna estritamente restrita a no máximo 10 registros ($M = 10$) para controle das partições e limites de subarquivos em memória secundária.
+\end{enumerate}
+
+\paragraph{Base de Dados Real -- Avaliação Nacional do Ensino Superior (PROVAO.TXT):}
+Os ensaios experimentais e as avaliações de desempenho são conduzidos sobre a base de dados histórica oficial do Exame Nacional de Cursos (denominado \textit{Provão}), correspondente ao ano de 2003 (última edição em que o exame foi aplicado sob esse formato). O arquivo de texto original, denominado \texttt{PROVAO.TXT}, engloba o universo de $471.705$ estudantes universitários brasileiros. Cada linha do arquivo textual possui formato posicional de largura fixa, encapsulando os seguintes campos:
+\begin{itemize}
+    \item \textbf{Número de Inscrição do Aluno:} Valor numérico inteiro longo (\texttt{long int}), ocupando as colunas 1 a 8;
+    \item \textbf{Nota do Aluno:} Valor real em ponto flutuante (\texttt{float}) no intervalo $[0.0, \, 100.0]$, ocupando as colunas 10 a 14. \textbf{Este atributo constitui a chave primária de ordenação} do presente trabalho;
+    \item \textbf{Estado Federativo (UF):} Cadeia alfanumérica de 2 caracteres, ocupando as colunas 16 e 17;
+    \item \textbf{Cidade de Residência/Origem:} Cadeia de caracteres com dimensão fixa de 50 posições, ocupando as colunas 19 a 68;
+    \item \textbf{Curso de Graduação:} Cadeia de caracteres com dimensão fixa de 30 posições, ocupando as colunas 70 a 99.
+\end{itemize}
+
+\paragraph{Mapeamento em Memória Interna e Estrutura dos Registros:}
+No modelo de implementação do sistema, cada registro do arquivo é representado pela classe \texttt{Item}, modelada para assegurar integridade tipológica estrita e layout de memória determinístico:
+\begin{lstlisting}[caption={Estrutura de dados representativa de cada registro do Provão (Item.hpp).}]
+class Item {
+public:
+    long registrationNumber;
+    float grade;
+    std::array<char, 2> state;
+    std::array<char, 50> city;
+    std::array<char, 30> degree;
+
+    Item() = default;
+    Item(long registrationNumber, float grade, std::array<char, 2> state,
+         std::array<char, 50> city, std::array<char, 30> degree)
+        : registrationNumber(registrationNumber), grade(grade), state(state),
+          city(city), degree(degree) {}
+};
+\end{lstlisting}
+
+\paragraph{Volumes Experimentais ($n$) e Estados Iniciais de Ordenação:}
+Conforme estabelecido pela especificação do projeto, a ordenação dos registros deve ser efetuada em ordem estritamente \textbf{ascendente} com base na nota obtida pelo aluno. A bancada de testes contempla seis ordens volumétricas progressivas correspondentes aos $n$ primeiros registros do arquivo:
+\begin{equation}
+    n \in \{100, \, 200, \, 2.000, \, 20.000, \, 200.000, \, 471.705\}.
+\end{equation}
+Adicionalmente, com a finalidade de mapear a sensibilidade dos métodos de ordenação à disposição prévia dos dados, cada volume $n$ é avaliado sob três condições estruturais distintas da entrada:
+\begin{itemize}
+    \item \textbf{Situação 1 -- Arquivo Ordenado Ascendentemente:} Os $n$ registros encontram-se previamente ordenados de forma crescente pelas notas;
+    \item \textbf{Situação 2 -- Arquivo Ordenado Descendentemente:} Os $n$ registros encontram-se dispostos em ordem estritamente decrescente de nota;
+    \item \textbf{Situação 3 -- Arquivo Desordenado (Aleatório):} Os $n$ registros encontram-se na disposição original desordenada aleatoriamente fornecida em \texttt{PROVAO.TXT}.
+\end{itemize}
+Os arquivos das Situações 1 e 2 são sintetizados de modo reprodutível a partir da base original, garantindo idoneidade comparativa entre todos os ensaios.
+
+\paragraph{Interface de Linha de Comando (CLI):}
+O programa executável gerado, denominado \texttt{ordena}, adota uma interface padronizada via console de comando:
+\begin{lstlisting}[language=bash,caption={Sintaxe de invocação da ferramenta de ordenação.}]
+ordena <metodo> <quantidade> <situacao> [-P]
+\end{lstlisting}
+onde os parâmetros representam:
+\begin{itemize}
+    \item \texttt{<metodo>}: Identificador numérico inteiro do algoritmo a ser executado (1 para Intercalação $2f$ fitas, 2 para Intercalação $f+1$ fitas, ou 3 para Quicksort Externo);
+    \item \texttt{<quantidade>}: Número inteiro $n$ de registros a serem ordenados ($100 \le n \le 471.705$);
+    \item \texttt{<situacao>}: Estado inicial do arquivo (1 para ordenado ascendente, 2 para descendente, e 3 para desordenado);
+    \item \texttt{[-P]}: Parâmetro opcional que comuta o modo de exibição detalhado, imprimindo os registros dos alunos antes da ordenação e o resultado consolidado após a ordenação.
+\end{itemize}
+Cada execução reporta ao console os quantitativos exatos de transferências de leitura, transferências de escrita, comparações efetuadas entre chaves e o tempo cronometrado total.
+
+\paragraph{Delimitação de Escopo e Estado de Desenvolvimento:}
+Ressalta-se que, no presente momento, a infraestrutura de engenharia do projeto encontra-se na fase de modelagem e consolidação das estruturas de dados e abstrações de fitas magnéticas virtuais. Os testes de validação funcional e as tabelas de resultados experimentais reportam, temporariamente, estimativas e marcadores de \textit{placeholder} padronizados (\texttt{[TBD]}), acompanhados de rigorosa fundamentação teórica acerca do comportamento assintótico esperado para cada cenário de execução.
+
+% ==============================================================================
+% 2. FERRAMENTAS UTILIZADAS E AMBIENTE EXPERIMENTAL
+% ==============================================================================
+\section{Ferramentas Utilizadas e Ambiente Experimental}
+\label{sec:ferramentas}
+
+Para assegurar reprodutibilidade científica, controle estrito de alocação de memória e precisão na contagem de operações primitivas de I/O, todo o ecossistema tecnológico do projeto foi padronizado de acordo com práticas rigorosas de engenharia de software contemporânea.
+
+\subsection{Linguagem, Compilador e Ferramentas de Construção}
+Embora as especificações didáticas gerais mencionem a implementação na linguagem C, optou-se pela utilização do padrão \textbf{C++23} (\textit{ISO/IEC 14882:2023}), mantendo a consistência arquitetural bem-sucedida do primeiro trabalho prático. Essa escolha proporciona abstrações de custo nulo em tempo de execução (\textit{zero-cost abstractions}), segurança de tipos em compilação e gerenciamento determinístico de recursos pelo paradigma RAII (\textit{Resource Acquisition Is Initialization}):
+\begin{itemize}
+    \item \textbf{Linguagem e Padrão:} C++23, empregando coleções de tamanho fixo (\texttt{std::array}) para mitigar dinamicidade indesejada em buffers de fita, fluxos de arquivo com tratamento explícito de buffers (\texttt{std::fstream}) e semântica de movimentação (\texttt{std::move});
+    \item \textbf{Compilador:} LLVM Clang 18.x / GNU GCC 13.x, aplicando otimizações avançadas de vetorização e \textit{inlining} sob o perfil Release (\texttt{-O3});
+    \item \textbf{Sinalizadores de Compilação Estritos:} Ativação mandatória de diagnósticos abrangentes (\texttt{-Wall}, \texttt{-Wextra}, \texttt{-Wpedantic}, \texttt{-Werror}) para coibir conversões implícitas, vazamentos de memória ou comportamento indefinido;
+    \item \textbf{Sistema de Construção:} \texttt{CMake} (versão 3.28+) gerenciando regras de compilação, geração do executável \texttt{ordena} e configuração de arquivos de comandos de compilação (\texttt{compile\_commands.json});
+    \item \textbf{Ambiente Reproduzível e Hermético:} \texttt{devenv} integrado ao ecossistema Nix (\texttt{devenv.nix}), garantindo que compiladores, bibliotecas de sistema e ferramentas de documentação LaTeX sejam exatamente idênticos entre todas as máquinas dos desenvolvedores e o ambiente de integração contínua;
+    \item \textbf{Padronização de Código e Linter:} \texttt{clang-format} (estilo padronizado Google/LLVM) e \texttt{clang-tidy} para análise estática contínua de código.
+\end{itemize}
+
+\subsection{Especificações do Ambiente de Execução (Hardware e Software)}
+Para assegurar determinismo, minimizar interferências causadas por escalonamento concorrente de processos e isolar latências flutuantes do subsistema de disco local, a bancada oficial de experimentos foi padronizada sob uma máquina virtual dedicada em nuvem (runner do GitHub Actions / Ubuntu Server).
+
+As especificações arquiteturais e operacionais da bancada de ensaios estão detalhadas na Tabela~\ref{tab:hardware}.
+
+\begin{table}[H]
+\centering
+\caption{Especificações do ambiente experimental de execução.}
+\label{tab:hardware}
+\begin{tabular}{p{0.36\textwidth} p{0.58\textwidth}}
+\toprule
+\textbf{Componente / Parâmetro} & \textbf{Especificação Técnica} \\
+\midrule
+Ambiente de Hospedagem & GitHub Actions Dedicated Virtual Runner \\
+Processador (CPU) & AMD EPYC 7763 / Intel Xeon Platinum (4 vCPUs x86\_64) \\
+Frequência Base / Boost & 2.60 GHz / 3.50 GHz \\
+Memória RAM Primária & 16 GB DDR4-3200 \\
+Armazenamento Secundário & SSD NVMe de Alta Performance ($\approx 145$ GB disponíveis) \\
+Sistema Operacional & Ubuntu 24.04 LTS (Linux x86\_64, Kernel 6.8+) \\
+Compilador Padrão & Clang 18.1.3 / GCC 13.3.0 (\texttt{-std=c++23 -O3}) \\
+Sistema de Arquivos & ext4 com montagem padrão e suporte a escrita direta \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Metodologia Experimental e Métricas Coletadas}
+A instrumentação do código é orientada pelo módulo singleton \texttt{Metrics}, garantindo que nenhuma instrução de I/O em fitas virtuais ou avaliação de predicado de ordenação passe sem contabilização precisa. Para cada teste de ordenação executado, quatro grandezas fundamentais são monitoradas:
+\begin{enumerate}
+    \item \textbf{Transferências de Leitura ($R$):} Número total de transferências de registros efetuadas da memória secundária (arquivos de dados originais ou fitas magnéticas virtuais) para a memória interna de trabalho;
+    \item \textbf{Transferências de Escrita ($W$):} Número total de transferências de registros emitidos a partir dos buffers da memória interna para gravação física nos arquivos de saída ou fitas magnéticas externas;
+    \item \textbf{Comparações de Chaves ($C$):} Quantidade exata de comparações relacionais ($<$, $\le$, $>$, $\ge$) efetuadas sobre o campo \texttt{grade} (nota) dos registros durante as etapas de ordenação interna, manutenção do heap de seleção por substituição e intercalação;
+    \item \textbf{Tempo de Execução ($T$, em milissegundos):} Intervalo cronometrado absoluto entre o início formal da rotina de ordenação externa e o fechamento do arquivo ordenado definitivo, mensurado com resolução de nanossegundos via \texttt{std::chrono::}\allowbreak\texttt{high\_resolution\_clock}.
+\end{enumerate}
+
+\paragraph{Protocolo Estatístico e Mitigação de Ruídos:}
+Seguindo o rigor metodológico validado no trabalho anterior, a avaliação empírica consolida os dados sob a ótica de distribuições percentilares:
+\begin{itemize}
+    \item \textbf{Tempo de Execução:} Para acomodar a variabilidade inerente às operações de I/O do sistema operacional (como descargas de páginas pelo \textit{page cache} do Linux), reportam-se os percentis \textbf{p50 (Mediana)}, \textbf{p75} e \textbf{p99 (Latência de Cauda / Tail Latency)};
+    \item \textbf{Métricas Algorítmicas Determinísticas (Leituras, Escritas e Comparações):} Dada a natureza determinística do fluxo das fitas magnéticas virtuais para uma dada permutação de entrada, reporta-se o valor mediano central \textbf{p50}, garantindo fidelidade analítica às formulações teóricas.
+\end{itemize}
+
+% ==============================================================================
+% 3. MÉTODOS DE ORDENAÇÃO EXTERNA
+% ==============================================================================
+\section{Métodos de Ordenação Externa}
+\label{sec:metodos}
+
+Nesta seção, os três métodos de ordenação em memória secundária são esmiuçados em relação aos seus fundamentos teóricos, arquitetura de implementação, fluxo de blocos e fitas, acompanhados de suas respectivas tabelas de métricas experimentais e discussões analíticas aprofundadas.
+
+% ------------------------------------------------------------------------------
+% 3.1 Intercalação Balanceada de Vários Caminhos (2f Fitas)
+% ------------------------------------------------------------------------------
+\subsection{Intercalação Balanceada com \texorpdfstring{$2f$}{2f} Fitas e Seleção por Substituição}
+\label{subsec:metodo_2f}
+
+\subsubsection{Princípio de Funcionamento e Modelo Teórico}
+O algoritmo de \textbf{Intercalação Balanceada de Vários Caminhos com $2f$ fitas} divide a tarefa de ordenação externa em duas etapas bem delimitadas: a \textbf{Geração de Blocos Ordenados Iniciais} e a \textbf{Intercalação Balanceada Multi-vias}.
+
+\paragraph{1. Geração de Blocos por Seleção por Substituição:}
+Em vez de utilizar uma ordenação interna simples (que geraria blocos rígidos de tamanho igual ao número de registros da memória primária, isto é, de tamanho $M = 10$), emprega-se a técnica de \textbf{Seleção por Substituição} com o auxílio de um \textit{Min-Heap} residente em RAM:
+\begin{enumerate}
+    \item O vetor de memória interna (com capacidade estrita para $M = 10$ registros) é inicialmente preenchido com os 10 primeiros elementos do arquivo de entrada, organizando-se uma estrutura de heap de mínimo sobre a chave de nota (\texttt{grade});
+    \item O menor elemento do heap (raiz) é extraído e gravado na fita de saída corrente;
+    \item O próximo registro do arquivo de entrada é lido para ocupar a posição liberada na raiz:
+    \begin{itemize}
+        \item Se a chave do novo registro for \textbf{maior ou igual} à chave do registro recém-gravado, o novo registro permanece elegível para o bloco em formação, e o heap é restaurado via operação \textit{Heapify} descendente;
+        \item Se a chave for \textbf{menor} que a do registro recém-gravado, o novo registro \textbf{não pode pertencer ao bloco atual} (pois violaria a monotonicidade ascendente). O registro é então \textbf{marcado como congelado} (ou alocado na cauda do reservatório), e o tamanho ativo do heap é decrementado em 1;
+    \end{itemize}
+    \item O ciclo prossegue até que todos os 10 registros da memória interna estejam congelados (tamanho ativo do heap igual a 0). Nesse instante, o bloco ordenado corrente é concluído com um marcador de fim de bloco, todos os elementos congelados são descongelados simultaneamente formando um novo heap ativo, e o algoritmo comuta a gravação para a próxima fita de entrada disponível de forma circular ($F_1, F_2, \dots, F_{10}$).
+\end{enumerate}
+
+Teoricamente, sob uma distribuição aleatória uniforme de chaves, a seleção por substituição gera blocos com tamanho médio esperado correspondente ao dobro da capacidade da memória interna:
+\begin{equation}
+    E[\text{Tamanho do Bloco}] \approx 2M = 2 \times 10 = 20 \text{ registros}.
+\end{equation}
+Mais notavelmente, se a entrada já estiver ordenada ascendentemente, a seleção por substituição gera \textbf{um único bloco contínuo de tamanho $n$}, eliminando por completo a necessidade de fases subsequentes de intercalação!
+
+\paragraph{2. Intercalação Balanceada Multi-vias ($10 \times 10$):}
+Na fase de intercalação, as 20 fitas são divididas simetricamente: 10 fitas atuam como fitas de entrada ($F_1 \dots F_{10}$) contendo os blocos gerados, e 10 fitas atuam como fitas de saída ($F_{11} \dots F_{20}$):
+\begin{enumerate}
+    \item Um elemento de cada uma das 10 fitas de entrada ativas é carregado em um torneio de seleção (ou min-heap de intercalação de tamanho 10);
+    \item O menor registro entre os 10 fluxos é transferido para a primeira fita de saída ($F_{11}$), e o próximo registro da fita vencedora é lido para recompor a estrutura;
+    \item O processo intercala os primeiros blocos das 10 fitas de entrada até que os blocos correntes de todas as 10 fitas se esgotem. Quando isso ocorre, o bloco resultante em $F_{11}$ está consolidado;
+    \item A intercalação avança para os próximos blocos das fitas de entrada, direcionando o novo fluxo para a fita de saída subsequente ($F_{12}$), operando de forma circular até esgotar todos os blocos das fitas de entrada;
+    \item Ao término da passada, os papéis das fitas são invertidos: $F_{11} \dots F_{20}$ passam a ser as fitas de entrada, e $F_1 \dots F_{10}$ tornam-se as fitas de saída. O número de passadas de intercalação necessárias para consolidar um único arquivo ordenado é:
+    \begin{equation}
+        P_{2f} = \left\lceil \log_{f} (B) \right\rceil = \left\lceil \log_{10} (B) \right\rceil,
+    \end{equation}
+    onde $B$ é o número total de blocos ordenados produzidos na seleção por substituição.
+\end{enumerate}
+
+\paragraph{Diagrama Conceitual do Fluxo de Dados ($2f$ Fitas):}
+A Figura~\ref{fig:fluxo_2f} esquematiza a topologia e a rotação simétrica das fitas no método de intercalação com $2f$ fitas.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.0cm,
+    tape/.style={rectangle, draw=blue!70, fill=blue!8, thick, minimum width=2.2cm, minimum height=0.6cm, align=center, font=\footnotesize\bfseries},
+    proc/.style={rectangle, draw=orange!80, fill=orange!10, rounded corners=3pt, thick, minimum width=3.0cm, minimum height=1.0cm, align=center, font=\footnotesize\bfseries},
+    heap/.style={regular polygon, regular polygon sides=3, draw=green!60!black, fill=green!10, thick, minimum size=1.8cm, align=center, font=\scriptsize\bfseries},
+    arrow/.style={-{Stealth[scale=1.0]}, thick, draw=gray!80}
+]
+
+% Arquivo Original
+\node[proc, fill=gray!15, draw=gray!70] (orig) {Arquivo Original\\PROVAO.TXT ($n$ itens)};
+
+% Heap de Substituição
+\node[heap, right=1.6cm of orig] (heap10) {Min-Heap\\$M=10$};
+\node[above=0.05cm of heap10, font=\scriptsize\color{green!50!black}\bfseries] {Seleção por Substituição};
+
+% Fitas de Entrada (1 a 10)
+\node[tape, right=1.8cm of heap10, yshift=1.2cm] (t1) {Fita $F_1$ (Blocos)};
+\node[tape, below=0.15cm of t1] (t2) {Fita $F_2$ (Blocos)};
+\node[below=0.15cm of t2, font=\footnotesize\bfseries] (tdots) {$\vdots$};
+\node[tape, below=0.15cm of tdots] (t10) {Fita $F_{10}$ (Blocos)};
+
+\begin{scope}[on background layer]
+    \node[draw=blue!40, dashed, fill=blue!2, fit=(t1) (t10), label={[font=\scriptsize\bfseries\color{blue!80}]above:Fitas de Entrada ($f=10$)}] (boxIn) {};
+\end{scope}
+
+% Intercalador
+\node[proc, right=1.8cm of boxIn] (merger) {Intercalador\\Multi-Vias\\(10 Caminhos)};
+
+% Fitas de Saída (11 a 20)
+\node[tape, right=1.8cm of merger, yshift=1.2cm] (t11) {Fita $F_{11}$};
+\node[tape, below=0.15cm of t11] (t12) {Fita $F_{12}$};
+\node[below=0.15cm of t12, font=\footnotesize\bfseries] (tdots2) {$\vdots$};
+\node[tape, below=0.15cm of tdots2] (t20) {Fita $F_{20}$};
+
+\begin{scope}[on background layer]
+    \node[draw=red!40, dashed, fill=red!2, fit=(t11) (t20), label={[font=\scriptsize\bfseries\color{red!80}]above:Fitas de Saída ($f=10$)}] (boxOut) {};
+\end{scope}
+
+% Conexões
+\draw[arrow] (orig) -- node[above, font=\tiny] {Leitura} (heap10);
+\draw[arrow] (heap10) -- node[above, font=\tiny] {Distribuição} (boxIn.west);
+\draw[arrow] (boxIn.east) -- node[above, font=\tiny] {10 fluxos} (merger);
+\draw[arrow] (merger) -- node[above, font=\tiny] {Intercalação} (boxOut.west);
+
+% Feedback alternância
+\coordinate (altY) at ([yshift=-0.8cm]boxIn.south);
+\draw[-{Stealth[scale=1.0, fill=red!70]}, thick, dashed, draw=red!70] 
+    (boxOut.south) -- (boxOut.south |- altY)
+    -- node[below=0.1cm, font=\scriptsize\bfseries\color{red!70}] {Inversão de papéis das fitas a cada passada até restar 1 único bloco consolidado} (boxIn.south |- altY)
+    -- (boxIn.south);
+
+\end{tikzpicture}%
+}
+\caption{Esquema operacional da Intercalação Balanceada com $2f$ fitas ($f = 10$).}
+\label{fig:fluxo_2f}
+\end{figure}
+
+\subsubsection{Resultados Experimentais e Tabela de Benchmark}
+A Tabela~\ref{tab:bench_2f} reporta a estrutura de dados coletada nos ensaios com a Intercalação Balanceada de $2f$ fitas. Por encontrar-se em processo de finalização de instrumentação e execução da bancada computacional, a tabela incorpora marcadores padronizados (\texttt{--} e \texttt{[TBD]}), sintetizando a estrutura de coleta das métricas empíricas.
+
+\begin{table}[H]
+\centering
+\caption{Benchmark experimental -- Intercalação Balanceada com $2f$ Fitas ($M=10$, $f=10$).}
+\label{tab:bench_2f}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llr rrr rr rrr rr}
+\toprule
+& & & \multicolumn{5}{c}{\textbf{Geração de Blocos (Substituição)}} & \multicolumn{5}{c}{\textbf{Fase de Intercalação / Total}} \\
+\cmidrule(lr){4-8} \cmidrule(lr){9-13}
+& & & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Escritas} & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Comparações} \\
+\cmidrule(lr){4-6} \cmidrule(lr){9-11}
+\textbf{Situação} & \textbf{Regime} & \textbf{Qtd ($n$)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} \\
+\midrule
+Ascendente  & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+\midrule
+Descendente & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\midrule
+Desordenado & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsubsection{Discussão Analítica e Comportamento Esperado}
+A formulação teórica do método de intercalação com $2f$ fitas permite antecipar padrões consistentes:
+\begin{itemize}
+    \item \textbf{Comportamento Ótimo na Situação 1 (Ascendente):} Quando o arquivo de entrada já se encontra ordenado, cada registro sucessivo lido possui chave $\ge$ à do registro imediatamente anterior. Consequentemente, nenhum elemento do heap é congelado ao longo de toda a leitura. A seleção por substituição gera exatamente \textbf{um único bloco de tamanho $n$} gravado integralmente na fita $F_1$. Como há apenas um bloco gerado, a fase de intercalação é formalmente dispensada ($P = 0$ passadas), resultando em custo mínimo de I/O de exatamente $n$ leituras e $n$ escritas;
+    \item \textbf{Pior Caso na Situação 2 (Descendente):} Quando os dados chegam em ordem inversa, cada novo elemento lido é estritamente menor que o anterior, forçando o congelamento imediato do nó no heap. O algoritmo produz blocos rígidos com tamanho exatamente igual à capacidade da memória interna ($M = 10$). Para $n = 471.705$, são gerados $\approx 47.171$ blocos. Como $f = 10$, serão necessárias $P = \lceil \log_{10}(47.171) \rceil = 5$ passadas completas de intercalação sobre a base;
+    \item \textbf{Caso Médio na Situação 3 (Desordenado):} Em virtude da propriedade probabilística do reservatório, o tamanho médio do bloco atinge $2M = 20$ registros, gerando $\approx 23.586$ blocos para a base completa, demandando também $P = \lceil \log_{10}(23.586) \rceil = 5$ passadas de intercalação. Em cada passada de intercalação, os $n$ registros são lidos e reescritos, totalizando um tráfego de $2 \times n \times P$ operações adicionais de transferência de registros.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+% 3.2 Intercalação Balanceada com f+1 Fitas
+% ------------------------------------------------------------------------------
+\subsection{Intercalação Balanceada com \texorpdfstring{$f+1$}{f+1} Fitas e Seleção por Substituição}
+\label{subsec:metodo_fplus1}
+
+\subsubsection{Princípio de Funcionamento e Modelo Teórico}
+O segundo método avaliado altera substancialmente a assimetria do arranjo de armazenamento externo: enquanto o método anterior reservava metade das fitas para entrada e metade para saída ($10 \times 10$), o algoritmo de \textbf{Intercalação Balanceada com $f+1$ Fitas} explora 19 fitas ativas de entrada e apenas 1 fita de saída em cada etapa de intercalação ($f = 19$, totalizando as mesmas 20 fitas disponíveis no sistema).
+
+\paragraph{1. Memória Interna Expandida ($M = 19$):}
+Para atender ao equilíbrio operacional das 19 fitas de entrada no torneio de intercalação, a especificação técnica concede uma memória interna ampliada para armazenar até \textbf{19 registros simultâneos} ($M = 19$, contra os $M = 10$ do método 1). Essa ampliação de $90\%$ no buffer interno potencializa expressivamente a fase de geração de blocos por seleção por substituição:
+\begin{equation}
+    E[\text{Tamanho do Bloco}_{f+1}] \approx 2M = 2 \times 19 = 38 \text{ registros}.
+\end{equation}
+Como consequência direta, o número inicial de blocos ordenados gerados no caso desordenado é reduzido para quase metade daquele observado no Método 1: para $n = 471.705$, são gerados aproximadamente $\approx 12.414$ blocos (em contraposição a mais de $23.500$ no método anterior).
+
+\paragraph{2. Intercalação Assimétrica com Redistribuição de Blocos:}
+Em contrapartida à elevada aridade de intercalação (19 caminhos simultâneos convergindo para uma fita receptora), a topologia com $f+1$ fitas não permite alternância direta de papéis em bloco simétrico:
+\begin{enumerate}
+    \item Na geração inicial, os blocos são distribuídos ciclicamente entre as 19 primeiras fitas ($F_1, F_2, \dots, F_{19}$);
+    \item Na etapa de intercalação, lê-se o primeiro registro de cada uma das 19 fitas ativas de entrada através de um min-heap de tamanho 19, gravando os registros ordenados sequencialmente na vigésima fita ($F_{20}$), que atua como fita receptora única de saída;
+    \item Concluída a intercalação dos blocos na fita $F_{20}$, os superblocos resultantes residem concentrados em uma única fita. Para viabilizar a próxima passada de intercalação multi-vias de 19 caminhos, torna-se mandatória uma etapa intermediária de \textbf{redistribuição}, dividindo os blocos contidos em $F_{20}$ de volta entre as fitas $F_1 \dots F_{19}$;
+    \item O processo itera até que a fita de saída $F_{20}$ contenha um único bloco consolidado abrangendo todos os $n$ elementos da base.
+\end{enumerate}
+
+\paragraph{Diagrama Conceitual do Fluxo de Dados ($f+1$ Fitas):}
+A Figura~\ref{fig:fluxo_fplus1} ilustra o funcionamento assimétrico de 19 caminhos convergindo para uma fita de saída e o ciclo de redistribuição.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.1cm and 1.0cm,
+    tape/.style={rectangle, draw=blue!70, fill=blue!8, thick, minimum width=2.2cm, minimum height=0.55cm, align=center, font=\footnotesize\bfseries},
+    proc/.style={rectangle, draw=orange!80, fill=orange!10, rounded corners=3pt, thick, minimum width=2.8cm, minimum height=0.9cm, align=center, font=\footnotesize\bfseries},
+    heap/.style={regular polygon, regular polygon sides=3, draw=green!60!black, fill=green!10, thick, minimum size=1.8cm, align=center, font=\scriptsize\bfseries},
+    arrow/.style={-{Stealth[scale=1.0]}, thick, draw=gray!80}
+]
+
+% Entrada
+\node[proc, fill=gray!15, draw=gray!70] (orig) {Arquivo Original\\PROVAO.TXT};
+
+% Heap M=19
+\node[heap, right=1.4cm of orig] (heap19) {Min-Heap\\$M=19$};
+\node[above=0.05cm of heap19, font=\scriptsize\color{green!50!black}\bfseries] {Substituição ($M=19$)};
+
+% Fitas 1 a 19
+\node[tape, right=1.6cm of heap19, yshift=1.4cm] (f1) {Fita $F_1$};
+\node[tape, below=0.1cm of f1] (f2) {Fita $F_2$};
+\node[below=0.1cm of f2, font=\footnotesize\bfseries] (fdots) {$\vdots$};
+\node[tape, below=0.1cm of fdots] (f19) {Fita $F_{19}$};
+
+\begin{scope}[on background layer]
+    \node[draw=blue!40, dashed, fill=blue!2, fit=(f1) (f19), label={[font=\scriptsize\bfseries\color{blue!80}]above:19 Fitas de Entrada ($f=19$)}] (boxIn19) {};
+\end{scope}
+
+% Intercalador 19 caminhos
+\node[proc, right=1.6cm of boxIn19] (merger19) {Intercalador\\Multi-Vias\\(19 Caminhos)};
+
+% Fita Saída 20
+\node[tape, draw=red!70, fill=red!10, right=1.6cm of merger19, minimum height=1.2cm] (f20) {Fita $F_{20}$\\(Saída Única)};
+
+% Conexões
+\draw[arrow] (orig) -- (heap19);
+\draw[arrow] (heap19) -- node[above, font=\tiny] {Distribuição} (boxIn19.west);
+\draw[arrow] (boxIn19.east) -- node[above, font=\tiny] {19 fluxos} (merger19);
+\draw[arrow] (merger19) -- node[above, font=\tiny] {Gravação} (f20);
+
+% Linha de redistribuição
+\coordinate (redistY) at ([yshift=-0.8cm]boxIn19.south);
+\draw[-{Stealth[scale=1.0, fill=red!70]}, thick, dashed, draw=red!70] 
+    (f20.south) -- (f20.south |- redistY)
+    -- node[below=0.1cm, font=\scriptsize\bfseries\color{red!70}] {Fase de Redistribuição: blocos de $F_{20}$ são distribuídos de volta para $F_1 \dots F_{19}$} (boxIn19.south |- redistY)
+    -- (boxIn19.south);
+
+\end{tikzpicture}%
+}
+\caption{Esquema operacional da Intercalação Balanceada com $f+1$ fitas ($f = 19$).}
+\label{fig:fluxo_fplus1}
+\end{figure}
+
+\subsubsection{Resultados Experimentais e Tabela de Benchmark}
+A Tabela~\ref{tab:bench_fplus1} consolida as medições correspondentes ao método com $f+1$ fitas, registrando os marcadores de teste nas 18 configurações do espaço de parâmetros.
+
+\begin{table}[H]
+\centering
+\caption{Benchmark experimental -- Intercalação Balanceada com $f+1$ Fitas ($M=19$, $f=19$).}
+\label{tab:bench_fplus1}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llr rrr rr rrr rr}
+\toprule
+& & & \multicolumn{5}{c}{\textbf{Geração de Blocos (Substituição)}} & \multicolumn{5}{c}{\textbf{Fase de Intercalação / Total}} \\
+\cmidrule(lr){4-8} \cmidrule(lr){9-13}
+& & & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Escritas} & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Comparações} \\
+\cmidrule(lr){4-6} \cmidrule(lr){9-11}
+\textbf{Situação} & \textbf{Regime} & \textbf{Qtd ($n$)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} \\
+\midrule
+Ascendente  & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+Ascendente  & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & 0     & [TBD] \\
+\midrule
+Descendente & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\midrule
+Desordenado & Padrão & 100     & [TBD] & [TBD] & [TBD] & 100   & 100   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200     & [TBD] & [TBD] & [TBD] & 200   & 200   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & 2.000 & 2.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & 20.000& 20.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & 200.000&200.000& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & 471.705&471.705& [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsubsection{Discussão Analítica e Comportamento Esperado}
+A análise comparativa entre as topologias $2f$ e $f+1$ expõe um clássico dilema de arquitetura de algoritmos de ordenação externa:
+\begin{itemize}
+    \item \textbf{Vantagem do Fator de Ramificação Superior:} Por possuir $f = 19$ fitas convergindo para a intercalação, o número teórico de passadas de intercalação é dado por:
+    \begin{equation}
+        P_{f+1} = \left\lceil \log_{19} (B) \right\rceil.
+    \end{equation}
+    Para $B \approx 12.414$ blocos (caso desordenado da base completa com $n=471.705$), tem-se $\lceil \log_{19}(12.414) \rceil = \lceil 3{,}20 \rceil = 4$ passadas de intercalação, contra as 5 passadas exigidas no esquema de 10 caminhos ($2f$ fitas). Isso representa uma redução nominal direta de $20\%$ na quantidade de passadas de mesclagem;
+    \item \textbf{Custo da Sobrecarga de Redistribuição:} Essa diminuição de passadas é contrabalanceada pelo custo estrito da etapa de cópia/redistribuição. Ao enviar todos os blocos intercalados para $F_{20}$, é mandatório reler $F_{20}$ e fatiar seus registros de volta entre as 19 fitas, incorrendo em leituras e escritas extras equivalentes a um ciclo completo de varredura ($+2n$ transferências de registros por fase de redistribuição);
+    \item \textbf{Comportamento em Dados Ordenados:} A exemplo do Método 1, na Situação 1 a seleção por substituição gera um único bloco ordenado de tamanho $n$. Como todos os dados cabem em um único bloco, a ordenação conclui com zero passadas de intercalação e zero transferências de redistribuição.
+\end{itemize}
+
+% ------------------------------------------------------------------------------
+% 3.3 Quicksort Externo
+% ------------------------------------------------------------------------------
+\subsection{Quicksort Externo}
+\label{subsec:metodo_quicksort}
+
+\subsubsection{Princípio de Funcionamento e Modelo Teórico}
+O algoritmo de \textbf{Quicksort Externo} adapta o elegante paradigma de ordenação por partição em torno de um pivô para manipular arquivos armazenados em dispositivos de memória secundária com acesso direto/aleatório.
+
+\paragraph{1. Área de Memória Interna e Janela de Pivoteamento ($M = 10$):}
+Diferente dos algoritmos de intercalação em fitas magnéticas (cujo fluxo é estritamente sequencial), o Quicksort Externo atua delimitando subarquivos através de dois apontadores em posições extremas: o limite inferior ($L_i$) e o limite superior ($L_s$). A memória interna armazena até $M = 10$ registros e atua como uma \textbf{área de pivoteamento com múltiplos delimitadores}, mantendo os limites $[\text{Min}, \text{Max}]$ dos registros presentes em RAM:
+\begin{enumerate}
+    \item Inicialmente, os 10 primeiros registros da partição corrente são lidos e ordenados internamente na memória primária;
+    \item Os ponteiros de leitura física no arquivo são posicionados: $L_i$ na extremidade inferior e $L_s$ na extremidade superior da partição em disco;
+    \item O algoritmo lê registros alternadamente das duas extremidades:
+    \begin{itemize}
+        \item Se o registro lido tiver chave de nota menor que a chave mínima presente no buffer interno ($\text{chave} < \text{Min}$), ele é imediatamente gravado na partição inferior em disco;
+        \item Se o registro lido tiver chave maior que a máxima presente no buffer ($\text{chave} > \text{Max}$), ele é gravado na partição superior em disco;
+        \item Se a chave situar-se no intervalo intermediário $[\text{Min}, \, \text{Max}]$, o registro lido é inserido ordenadamente no vetor interno, expulsando o elemento extremo mais adequado para gravação no subarquivo inferior ou superior, preservando os limites;
+    \end{itemize}
+    \item À medida que os ponteiros $L_i$ e $L_s$ convergem, todos os elementos menores que o conjunto de pivôs concentram-se no subarquivo à esquerda, e todos os elementos maiores concentram-se no subarquivo à direita;
+    \item Ao cruzarem-se os limites em disco, os 10 registros que permaneceram na memória interna são descarregados ordenados na região central do arquivo, encontrando-se definitivamente posicionados em seu local final de ordenação;
+    \item O algoritmo invoca-se recursivamente sobre o subarquivo inferior e sobre o subarquivo superior.
+\end{enumerate}
+
+\paragraph{2. Condição de Parada (Caso Base):}
+Quando um subarquivo particionado atinge tamanho menor ou igual à capacidade da memória interna ($|S| \le M = 10$), a partição é inteiramente carregada para a memória primária, submetida a uma rotina de ordenação interna em RAM (como \textit{Quicksort} interno ou \textit{Insertion Sort}) e regravada diretamente no arquivo final, finalizando o ramo da árvore recursiva sem necessidade de particionamentos adicionais.
+
+\paragraph{Diagrama Conceitual do Particionamento Externo:}
+A Figura~\ref{fig:fluxo_quicksort} ilustra a partição bidirecional do arquivo externo em torno da área de pivoteamento em RAM.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.0cm,
+    block/.style={rectangle, draw=gray!80, fill=gray!10, thick, minimum height=1.0cm, align=center, font=\footnotesize\bfseries},
+    arrow/.style={-{Stealth[scale=1.0]}, thick, draw=gray!80}
+]
+
+% Representação do Arquivo em Disco
+\node[block, minimum width=3.2cm, fill=red!10, draw=red!70] (subInf) {Subarquivo Inferior\\(Chaves $< \text{Min}$)};
+\node[block, minimum width=3.6cm, fill=green!15, draw=green!70!black, right=0.0cm of subInf] (areaRAM) {Área de Memória ($M=10$)\\Registros Pivotais Centrais\\$[\text{Min} \dots \text{Max}]$};
+\node[block, minimum width=3.2cm, fill=blue!10, draw=blue!70, right=0.0cm of areaRAM] (subSup) {Subarquivo Superior\\(Chaves $> \text{Max}$)};
+
+% Delimitadores e Ponteiros
+\node[above=0.6cm of subInf.west, font=\scriptsize\bfseries\color{red!80!black}] (ptrLi) {Ponteiro Inferior $L_i \longrightarrow$};
+\node[above=0.6cm of subSup.east, font=\scriptsize\bfseries\color{blue!80!black}] (ptrLs) {$\longleftarrow \text{Ponteiro Superior } L_s$};
+
+\draw[arrow, red!80!black] (ptrLi) -- (subInf.north west);
+\draw[arrow, blue!80!black] (ptrLs) -- (subSup.north east);
+
+% Chamadas Recursivas
+\node[below=1.2cm of subInf, align=center, font=\scriptsize\bfseries\color{red!80!black}] (recInf) {Recursão:\\QuicksortExterno($1, \, |S_{inf}|$)\\se $|S_{inf}| > 10$};
+\node[below=1.2cm of subSup, align=center, font=\scriptsize\bfseries\color{blue!80!black}] (recSup) {Recursão:\\QuicksortExterno($|S_{sup}|, \, n$)\\se $|S_{sup}| > 10$};
+\node[below=1.2cm of areaRAM, align=center, font=\scriptsize\bfseries\color{green!50!black}] (fixedRAM) {Posições Finais\\Consolidadas em Disco\\(Não reprocessa)};
+
+\draw[arrow, dashed, red!80!black] (subInf.south) -- (recInf);
+\draw[arrow, dashed, blue!80!black] (subSup.south) -- (recSup);
+\draw[arrow, green!50!black] (areaRAM.south) -- (fixedRAM);
+
+\end{tikzpicture}%
+}
+\caption{Mecanismo de particionamento e convergência do Quicksort Externo.}
+\label{fig:fluxo_quicksort}
+\end{figure}
+
+\subsubsection{Resultados Experimentais e Tabela de Benchmark}
+A Tabela~\ref{tab:bench_quicksort} reporta a estrutura de dados consolidada para o Quicksort Externo nas três situações e nos seis volumes de dados.
+
+\begin{table}[H]
+\centering
+\caption{Benchmark experimental -- Quicksort Externo ($M=10$).}
+\label{tab:bench_quicksort}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llr rrr rr rrr rr}
+\toprule
+& & & \multicolumn{5}{c}{\textbf{Fase de Particionamento}} & \multicolumn{5}{c}{\textbf{Fase de Recursão / Total}} \\
+\cmidrule(lr){4-8} \cmidrule(lr){9-13}
+& & & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Escritas} & \multicolumn{3}{c}{\textbf{Tempo (ms)}} & \textbf{Leituras} & \textbf{Comparações} \\
+\cmidrule(lr){4-6} \cmidrule(lr){9-11}
+\textbf{Situação} & \textbf{Regime} & \textbf{Qtd ($n$)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} & \textbf{p50} & \textbf{p75} & \textbf{p99} & \textbf{(p50)} & \textbf{(p50)} \\
+\midrule
+Ascendente  & Padrão & 100     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Ascendente  & Padrão & 200     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Ascendente  & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Ascendente  & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Ascendente  & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Ascendente  & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\midrule
+Descendente & Padrão & 100     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Descendente & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\midrule
+Desordenado & Padrão & 100     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200     & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 2.000   & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 20.000  & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 200.000 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+Desordenado & Padrão & 471.705 & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] & [TBD] \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsubsection{Discussão Analítica e Comportamento Esperado}
+O comportamento assintótico e operacional do Quicksort Externo exibe particularidades notáveis em virtude do seu mecanismo de partição:
+\begin{itemize}
+    \item \textbf{Custo de I/O em Níveis de Recursão:} Em cada nível da árvore de particionamento, todos os elementos da partição em análise devem ser lidos da memória secundária e posteriormente gravados nos respectivos subarquivos em disco. Logo, cada nível recursivo consome aproximadamente $2n$ transferências de registros (1 leitura e 1 escrita por registro). No caso médio balanceado, a profundidade da recursão é proporcional a:
+    \begin{equation}
+        H_{\text{médio}} \approx O(\log_{M+1} n) = O(\log_{11} n),
+    \end{equation}
+    delimitando o custo total esperado de transferências de disco em $O(n \log_{M+1} n)$;
+    \item \textbf{Degeneração no Pior Caso (Dados Ordenados ou Inversos):} Se os elementos pivotais carregados no vetor interno forem extremos (mínimos ou máximos locais), o particionamento divide o conjunto de forma profundamente assimétrica (gerando partições de tamanho $n - M$ e 0). Nessa hipótese, a profundidade da árvore recursiva atinge $O(n / M)$, elevando a quantidade de transferências de leitura e escrita para a complexidade quadrática $O(n^2 / M)$, provocando intensa degradação temporal e potencial sobrecarga de I/O em arquivos de grande porte ($n = 200.000$ e $n = 471.705$);
+    \item \textbf{Vantagem de Não Exigir Fitas Magnéticas Múltiplas:} Em contraste com os Métodos 1 e 2 (que demandam alocação e orquestração de exatamente 20 fitas externas virtuais), o Quicksort Externo opera essencialmente sobre subarquivos particionados de acesso direto, eliminando o cabeçalho de gerenciamento de múltiplos descritores de fita e simplificando o footprint de arquivos no sistema operacional.
+\end{itemize}
+
+% ==============================================================================
+% 4. COMPARAÇÃO GERAL E DISCUSSÃO DOS ALGORITMOS
+% ==============================================================================
+\section{Comparação Geral e Discussão dos Algoritmos}
+\label{sec:comparacao}
+
+A análise comparativa integrada dos três métodos elucida os trade-offs fundamentais existentes entre capacidade de memória primária, multiplicidade de dispositivos de armazenamento externo e estabilidade assintótica.
+
+\subsection{Custo de Transferências de Memória Externa (Leitura e Escrita)}
+O custo de I/O representa a métrica dominante do desempenho global:
+\begin{itemize}
+    \item \textbf{Intercalação com $2f$ Fitas ($10 \times 10$):} Apresenta extrema previsibilidade. Na fase de geração de blocos, efetua estritamente $n$ leituras e $n$ escritas. Cada passada de intercalação adiciona exatamente $n$ leituras e $n$ escritas. Com $f = 10$, a quantidade de passadas cresce com base no logaritmo decimal do número de blocos, contendo o tráfego total de E/S mesmo para a escala máxima de 471.705 registros;
+    \item \textbf{Intercalação com $f+1$ Fitas ($19 \times 1$):} Beneficia-se de blocos iniciais maiores ($E[\text{bloco}] \approx 38$ registros graças a $M=19$) e base logarítmica superior ($\log_{19} B$), demandando teoricamente menos passadas de mesclagem. Todavia, a necessidade mandatória de redistribuir os registros da fita receptora $F_{20}$ de volta para as 19 fitas de entrada a cada passada introduz uma sobrecarga de varredura ($+2n$ operações de I/O por passada de redistribuição), podendo mitigar ou anular a vantagem algorítmica da maior aridade de intercalação;
+    \item \textbf{Quicksort Externo:} No caso médio, exibe eficiência comparável ou superior à intercalação balanceada por reter e fixar $M = 10$ elementos ordenados diretamente em suas posições definitivas a cada nó da árvore de particionamento. Contudo, exibe grande vulnerabilidade à assimetria de partições em dados patológicos, que elevam as transferências a patamares proibitivos.
+\end{itemize}
+
+\subsection{Custo de Comparações na Memória Principal}
+Embora as transferências de disco representem a maior fatia do tempo cronometrado, o volume de comparações lógicas em RAM reflete a complexidade do algoritmo de seleção interna:
+\begin{itemize}
+    \item Na \textbf{Seleção por Substituição}, a inserção e restauração de cada novo elemento no heap demanda $O(\log_2 M)$ comparações por registro (sendo $\log_2 10 \approx 3{,}32$ no Método 1 e $\log_2 19 \approx 4{,}25$ no Método 2);
+    \item Na \textbf{Intercalação Multi-vias}, a determinação do menor elemento entre os fluxos ativos de entrada exige $O(\log_2 f)$ comparações por registro emitido;
+    \item No \textbf{Quicksort Externo}, cada elemento lido do subarquivo é comparado contra os limites da área interna de 10 registros. Empregando-se busca binária no vetor interno ordenado, realizam-se $\approx \lceil \log_2 10 \rceil = 4$ comparações por registro em cada nível recursivo.
+\end{itemize}
+
+\subsection{Sensibilidade ao Ordenamento Inicial da Base de Dados}
+A disposição prévia dos registros em \texttt{PROVAO.TXT} induz respostas diametralmente opostas nos três algoritmos:
+\begin{itemize}
+    \item \textbf{Arquivo Ordenado Ascendente (Situação 1):} É o melhor caso absoluto para os Métodos 1 e 2. Graças à seleção por substituição, o heap produz um único bloco abrangendo todos os $n$ elementos sem congelar nenhum registro, eliminando completamente toda a fase de intercalação. No Quicksort Externo, ao contrário, a ordenação prévia pode provocar partições desbalanceadas caso os pivôs selecionados não dividam o subarquivo uniformemente;
+    \item \textbf{Arquivo Ordenado Descendente (Situação 2):} Constitui o pior caso para a seleção por substituição (todos os nós congelam imediatamente, gerando blocos de tamanho mínimo $M$). Nos Métodos 1 e 2, isso maximiza o número inicial de blocos a serem intercalados. No Quicksort Externo, também induz desbalanceamento severo de partições recursivas;
+    \item \textbf{Arquivo Desordenado (Situação 3):} Representa o cenário prático típico de produção. A seleção por substituição atinge seu desempenho clássico de blocos de tamanho $\approx 2M$, e o Quicksort Externo tende à altura média logarítmica estável $O(\log_{M+1} n)$.
+\end{itemize}
+
+\subsection{Síntese Comparativa Geral}
+A Tabela~\ref{tab:sintese_comparativa} consolida os parâmetros arquiteturais, operacionais e de complexidade teórica dos três métodos de ordenação externa investigados.
+
+\begin{table}[H]
+\centering
+\caption{Quadro comparativo consolidado dos algoritmos de ordenação externa.}
+\label{tab:sintese_comparativa}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+\textbf{Característica / Propriedade} & \textbf{Intercalação $2f$ Fitas} & \textbf{Intercalação $f+1$ Fitas} & \textbf{Quicksort Externo} \\
+\midrule
+Capacidade da Memória Interna ($M$)   & 10 registros                     & 19 registros                     & 10 registros \\
+Número Total de Fitas / Dispositivos  & 20 fitas ($10 \text{ in} / 10 \text{ out}$) & 20 fitas ($19 \text{ in} / 1 \text{ out}$) & Acesso aleatório / particionamento \\
+Técnica de Geração de Blocos Iniciais & Seleção por Substituição ($M=10$)& Seleção por Substituição ($M=19$)& N/A (Particionamento direto) \\
+Tamanho Médio do Bloco Inicial ($E[B]$)& $2M = 20$ registros             & $2M = 38$ registros             & N/A \\
+Fator de Intercalação (Aridade)       & 10 caminhos simultâneos          & 19 caminhos simultâneos          & Divisão em 2 subarquivos \\
+Necessidade de Redistribuição         & Não (inversão alternada de fitas)& Sim (cópia de $F_{20} \to F_1..F_{19}$)& Não se aplica \\
+Passadas de Intercalação (Caso Médio) & $\approx \lceil \log_{10}(n / 20) \rceil$& $\approx \lceil \log_{19}(n / 38) \rceil$& N/A \\
+Complexidade de I/O (Melhor Caso)     & $O(n)$ (1 bloco de tamanho $n$)  & $O(n)$ (1 bloco de tamanho $n$)  & $O(n \log_{M} n)$ \\
+Complexidade de I/O (Caso Médio)      & $O(n \log_{10}(n/M))$            & $O(n \log_{19}(n/M)) + \text{Redist.}$ & $O(n \log_{M} n)$ \\
+Complexidade de I/O (Pior Caso)       & $O(n \log_{10}(n/M))$ (blocos $M$)& $O(n \log_{19}(n/M)) + \text{Redist.}$& $O(n^2 / M)$ (degeneração) \\
+Sensibilidade à Ordenação Ascendente  & Ótima (intercalação nula)        & Ótima (intercalação nula)        & Risco de partição desbalanceada \\
+Sensibilidade à Ordenação Descendente & Blocos de tamanho $M$            & Blocos de tamanho $M$            & Risco de partição desbalanceada \\
+Complexidade de Engenharia de Fitas   & Moderada (troca de ponteiros)    & Alta (redistribuição física)     & Baixa (apontadores no arquivo) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+% ==============================================================================
+% 5. CONCLUSÃO E DIFICULDADES DE IMPLEMENTAÇÃO
+% ==============================================================================
+\section{Conclusão e Dificuldades de Implementação}
+\label{sec:conclusao}
+
+\subsection{Considerações Finais e Parecer Analítico}
+O estudo e a modelagem formal dos três métodos de ordenação externa conduzem a conclusões essenciais acerca da gestão de armazenamento secundário:
+\begin{enumerate}
+    \item \textbf{Primazia Crítica do I/O:} Na ordenação em memória externa, o tempo de resposta do sistema é dominado de maneira absoluta pela quantidade de acessos físicos a disco (operações de leitura e escrita). A CPU e a memória RAM desempenham papel de filtragem e triagem rápida; logo, algoritmos que maximizam o tamanho dos blocos iniciais ou elevam a aridade de intercalação garantem vantagens operacionais expressivas;
+    \item \textbf{Eficácia da Seleção por Substituição:} A técnica de seleção por substituição demonstra ser uma abordagem extraordinariamente elegante para geração de blocos, explorando a ordem natural preexistente nas entradas para produzir blocos que superam amplamente a capacidade de memória interna ($2M$ em média, e $n$ no melhor caso), amenizando de forma direta a sobrecarga das fases de intercalação;
+    \item \textbf{O Dilema $2f$ vs. $f+1$:} Embora o método de $f+1$ fitas possua maior aridade ($k = 19$) e maior buffer de geração ($M = 19$), a obrigação de redistribuir blocos a partir de uma fita única de saída representa um gargalo de I/O considerável, tornando o esquema simétrico $2f$ ($10 \times 10$) notavelmente mais fluído e eficiente em termos de simplicidade de tráfego de dados;
+    \item \textbf{Versatilidade do Quicksort Externo:} Para sistemas operacionais com suporte moderno a sistemas de arquivos com paginação de acesso direto, o Quicksort Externo prescinde da complexa orquestração de 20 fitas virtuais, constituindo uma alternativa compacta, com o ônus de requerer estratégias de mitigação contra pivôs desfavoráveis.
+\end{enumerate}
+
+\subsection{Principais Dificuldades de Implementação Encontradas e Previstas}
+A engenharia de software voltada a algoritmos de ordenação em memória secundária impõe desafios técnicos rigorosos, dos quais destacam-se:
+\begin{enumerate}
+    \item \textbf{Gerenciamento Físico de 20 Fitas Magnéticas Simultâneas:} A orquestração concorrente de vinte fluxos de arquivos virtuais (\texttt{Tape01.bin} a \texttt{Tape20.bin}) demanda controle estrito de descritores de arquivos (\textit{file descriptors}). Em sistemas Unix/Linux, limites operacionais (\texttt{ulimit -n}) e políticas de \textit{buffering} do \texttt{std::fstream} exigem liberação pontual e descarte imediato de resíduos de disco após cada etapa;
+    \item \textbf{Protocolo de Fim de Bloco na Seleção por Substituição:} Identificar inequivocamente onde um bloco ordenado termina dentro de uma fita virtual sem corromper os registros do bloco seguinte requer o emprego de marcadores binários especiais de delimitação (\textit{sentinels}) ou o registro de um cabeçalho de metadados informando o comprimento de cada corrida (\textit{run});
+    \item \textbf{Controle de Congelamento no Heap de Mínimo:} A implementação do min-heap com capacidade de particionamento interno entre elementos ativos e elementos congelados exige manipulação cuidadosa de índices em C++, assegurando que o operador \textit{Heapify} atue estritamente sobre a partição ativa e preserve a integridade da cauda reservada;
+    \item \textbf{Gerenciamento de Ponteiros no Quicksort Externo:} A coordenação simultânea de cursores de leitura/escrita ($L_i$ e $L_s$) sob um mesmo arquivo em disco requer cálculos rigorosos de deslocamento em bytes (\texttt{seekg} e \texttt{seekp}), prevenindo sobrescritas acidentais de registros que ainda não foram analisados pela área de memória central.
+\end{enumerate}
+
+\end{document}
