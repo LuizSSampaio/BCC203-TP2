@@ -291,7 +291,7 @@ Teoricamente, sob uma distribuição aleatória uniforme de chaves, a seleção 
 \begin{equation}
     E[\text{Tamanho do Bloco}] \approx 2M = 2 \times 10 = 20 \text{ registros}.
 \end{equation}
-Mais notavelmente, se a entrada já estiver ordenada ascendentemente, a seleção por substituição gera \textbf{um único bloco contínuo de tamanho $n$}, eliminando por completo a necessidade de fases subsequentes de intercalação!
+Em particular, caso a entrada já se encontre ordenada ascendentemente, a seleção por substituição gera \textbf{um único bloco contínuo de tamanho $n$}, dispensando por completo a execução de fases subsequentes de intercalação.
 
 \paragraph{2. Intercalação Balanceada Multi-vias ($10 \times 10$):}
 Na fase de intercalação, as 20 fitas são divididas simetricamente: 10 fitas atuam como fitas de entrada ($F_1 \dots F_{10}$) contendo os blocos gerados, e 10 fitas atuam como fitas de saída ($F_{11} \dots F_{20}$):
