@@ -1,3 +1,4 @@
+// Implementa a fita com buffer de página: acumula registros em blocos para escrita, lê os blocos sequencialmente e mantém o tamanho e a posição dos runs armazenados, além de encaminhar as métricas de I/O para a fita subjacente.
 #include "BufferedTape.hpp"
 
 namespace FMais1 {

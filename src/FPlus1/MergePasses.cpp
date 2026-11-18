@@ -1,3 +1,4 @@
+// Implementa as operações das passadas de intercalação: seleciona repetidamente o menor registro entre os runs de entrada usando o heap, grava os runs resultantes na fita de saída e os redistribui entre as fitas de entrada para a próxima passada.
 #include "MergeFPlus1.hpp"
 
 #include <array>

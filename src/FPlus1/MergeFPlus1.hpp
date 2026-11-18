@@ -1,3 +1,4 @@
+// Declara a classe BalancedMergeFPlus1 e seus parâmetros de memória e fitas; a classe coordena a geração e intercalação dos runs, redistribui dados entre as fitas, acompanha métricas e expõe a verificação do resultado e a execução do método 2.
 #pragma once
 
 #include <cstddef>

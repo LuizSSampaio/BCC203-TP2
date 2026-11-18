@@ -1,3 +1,4 @@
+// Declara BufferedTape, uma abstração de fita que usa um buffer do tamanho de uma página para reduzir operações de I/O e registra os comprimentos dos runs contíguos para permitir sua leitura e intercalação.
 #pragma once
 
 #include <array>

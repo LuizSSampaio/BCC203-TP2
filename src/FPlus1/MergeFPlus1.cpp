@@ -1,3 +1,4 @@
+// Implementa a inicialização e o fluxo principal do método de intercalação balanceada f+1: gera runs, executa passadas de intercalação até obter um único run, grava o resultado no arquivo binário e fornece a função que integra o método ao executor de ordenações.
 #include "MergeFPlus1.hpp"
 
 #include <array>
