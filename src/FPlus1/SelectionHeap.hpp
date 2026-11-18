@@ -1,4 +1,4 @@
-
+// Declara um heap mínimo de capacidade fixa para a seleção por substituição e a intercalação: cada entrada associa um registro ao número do run e à fita de origem, e o heap ordena primeiro pelo run e depois pela nota, registrando as comparações de chaves.
 #pragma once
 
 #include <array>
@@ -15,8 +15,8 @@ namespace FMais1 {
 // Registro armazenado no heap e seus metadados de bloco/fita.
 struct HeapEntry {
     Item item;
-    uint32_t run = 0;
-    uint32_t tape = 0;
+    uint32_t run = 0; // O heap dá prioridade ao run atual; dentro dele, escolhe a menor nota.
+    uint32_t tape = 0; // durante a intercalação, indica de qual fita veio o registro. Assim, quando ele sai do heap, o programa sabe em qual fita buscar o próximo registro.
 };
 
 // Heap de mínimo com capacidade fixa, ordenado por bloco e nota.
@@ -67,6 +67,8 @@ class SelectionHeap {
     }
 
   private:
+
+    // a deve sair antes de b?
     bool Less(const HeapEntry &a, const HeapEntry &b) {
         if (a.run != b.run) {
             return a.run < b.run;
@@ -75,6 +77,7 @@ class SelectionHeap {
         return a.item.grade < b.item.grade;
     }
 
+    // Reorganiza o heap depois que um registro muda de posição ou valor
     void SiftDown(std::size_t i) {
         while (true) {
             const std::size_t left = 2 * i + 1;

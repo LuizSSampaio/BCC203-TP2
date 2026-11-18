@@ -1,3 +1,4 @@
+// Implementa a geração inicial de runs por seleção por substituição: lê os registros do arquivo em páginas, mantém até 19 registros no heap, distribui os runs ordenados pelas fitas de entrada e contabiliza comparações e valida a quantidade lida.
 #include "MergeFPlus1.hpp"
 
 #include <array>
